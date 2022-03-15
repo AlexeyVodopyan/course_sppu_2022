@@ -16,7 +16,7 @@ def rho_w_kgm3(P_MPa, T_K, ws=0):
     :return: плотность воды в кг на кубический метр
     """
     rho_w_sc_kgm3 = 1000*(1.0009 - 0.7114 * ws + 0.2605 * ws**2)**(-1)
-    return rho_w_sc_kgm3 /(1+(T_K-273)/10000*(0.269*(T_K-273)**(0.637)-0.8))
+    return rho_w_sc_kgm3 / (1+(T_K-273)/10000*(0.269*(T_K-273)**(0.637)-0.8))
 
 
 def salinity_gg(rho_kgm3):
@@ -56,7 +56,7 @@ def Re(q_m3day, d_m, mu_mPas=0.2, rho_kgm3=1000):
     :param rho_kgm3: плотность жидкости в кг на кубический метр (по умолчанию 1000 кг/м3, чистая вода)
     :return: число Рейнольдса
     """
-    v_ms = q_m3day / 86400 / 3.1415 * 4 / d_m ** 2
+    v_ms = q_m3day / 86400 / np.pi * 4 / d_m ** 2
     return rho_kgm3 * v_ms * d_m / mu_mPas * 1000
 
 
@@ -102,10 +102,10 @@ def dp_dh(p_MPa, T_K, q_liq_per_day, d_m, angle_deg, roughness, rho_water):
     dp_dl_grav = rho * 9.81 * np.sin(angle_deg * np.pi / 180)
 
     q_liq_per_second = q_liq_per_day / 86400
-    f = friction_Churchill(q_liq_per_second, d_m, mu, rho, roughness)
+    f = friction_Churchill(q_liq_per_day, d_m, mu, rho, roughness)
     dp_dl_fric = f * rho * q_liq_per_second**2 / d_m**5
 
-    return (dp_dl_grav - 0.815 * dp_dl_fric) / 1e6
+    return (dp_dl_grav - 0.81057 * dp_dl_fric) / 1e6
 
 
 def dpdT_dh(pT, h, q_liq_per_day, d_m, angle_deg, roughness, T_grad, rho_water):
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     d_tub = input_parameters['d_tub']  # диаметр НКТ, м
     angle = input_parameters['angle']  # угол наклона скважины к горизонтали, градус
     roughness = input_parameters['roughness']  # шероховатость
-    p_wh = input_parameters['p_wh'] * 0.101325  # буферное давление, атм
+    p_wh = input_parameters['p_wh'] * 0.101325  # буферное давление, МПа
     T_wh = input_parameters['t_wh'] + 273  # температура жидкости у буферной задвижки, градус Кельвина
     temp_grad = input_parameters['temp_grad'] / 100  # геотермический градиент, градус Кельвина / 1 м
 
@@ -140,6 +140,6 @@ if __name__ == '__main__':
         pressure_result = np.append(pressure_result, result[:, 0][-1])
         temperature_result = np.append(temperature_result, result[:, 1][-1])
 
-    plt.plot(q_liqs, pressure_result*9.86923)
+    plt.plot(q_liqs, pressure_result / 0.101325)
     plt.show()
     #print(result.y[0])
