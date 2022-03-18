@@ -7,7 +7,7 @@ import json
 import os
 
 
-def rho_w_kgm3(P_MPa, T_K, ws=0):
+def rho_w_kgm3(P_MPa, T_K, ws=0.0):
     """
     рассчитывает плотность воды в зависимости от давления, температуры и солёности
     :param P_MPa: давление в МПа (в данной функции пренебрегаем сжимаемостью воды, поэтому давление не используется)
@@ -33,7 +33,7 @@ def salinity_gg(rho_kgm3):
         return 0
 
 
-def visc_w_cP(P_MPa, T_K, ws=0):
+def visc_w_cP(P_MPa, T_K, ws=0.0):
     """
     рассчитывает вязкость воды в зависимости от давления, температуры и солёности
     :param P_MPa: давление в МПа
@@ -57,7 +57,8 @@ def Re(q_m3day, d_m, mu_mPas=0.2, rho_kgm3=1000):
     :return: число Рейнольдса
     """
     v_ms = q_m3day / 86400 / np.pi * 4 / d_m ** 2
-    return rho_kgm3 * v_ms * d_m / mu_mPas * 1000
+    Re_num = rho_kgm3 * v_ms * d_m / mu_mPas * 1000
+    return Re_num
 
 
 def friction_Jain(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness=0.000018):
@@ -67,14 +68,15 @@ def friction_Jain(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness=0.00
     :param d_m: диаметр трубы в метрах (по умолчанию 0.089 м)
     :param mu_mPas: вязкость жидкости в миллипуазах (по умолчанию 0.2 мПз)
     :param rho_kgm3: плотность жидкости в кг на кубический метр (по умолчанию 1000 кг/м3, чистая вода)
-    :param roughness: шероховатость (по умолчанию 0.000018)
+    :param roughness: шероховатость в метрах (по умолчанию 0.000018 м)
     :return: коэффициент трения Муди
     """
     Re_val = Re(q_m3day, d_m, mu_mPas, rho_kgm3)
     if Re_val < 3000:
-        return 64/Re_val
+        fr = 64/Re_val
     else:
-        return 1/(1.14-2 * np.log10(roughness/d_m + 21.25 / (Re_val ** 0.9)))**2
+        fr = 1/(1.14-2 * np.log10(roughness/d_m + 21.25 / (Re_val ** 0.9)))**2
+    return fr
 
 
 def friction_Churchill(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness=0.000018):
@@ -84,17 +86,28 @@ def friction_Churchill(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness
     :param d_m: диаметр трубы в метрах (по умолчанию 0.089 м)
     :param mu_mPas: вязкость жидкости в миллипуазах (по умолчанию 0.2 мПз)
     :param rho_kgm3: плотность жидкости в кг на кубический метр (по умолчанию 1000 кг/м3, чистая вода)
-    :param roughness: шероховатость (по умолчанию 0.000018)
+    :param roughness: шероховатость в метрах (по умолчанию 0.000018 м)
     :return: коэффициент трения Муди
     """
     Re_val = Re(q_m3day, d_m, mu_mPas, rho_kgm3)
     A = (-2.457 * np.log((7/Re_val)**(0.9)+0.27*(roughness/d_m)))**16
     B = (37530/Re_val)**16
-    return 8 * ((8/Re_val)**12+1/(A+B)**1.5)**(1/12)
+    fr = 8 * ((8/Re_val)**12+1/(A+B)**1.5)**(1/12)
+    return fr
 
 
 def dp_dh(p_MPa, T_K, q_liq_per_day, d_m, angle_deg, roughness, rho_water):
-
+    """
+    рассчитывает градиент давления в скважине
+    :param p_MPa: давление в МПа
+    :param T_K: температура в К
+    :param q_liq_per_day: дебит жидкости в кубометрах в сутки
+    :param d_m: диаметр трубы в метрах
+    :param angle_deg: угол наклона скважины к горизонтали в метрах
+    :param roughness: шероховатость в метрах
+    :param rho_water: плотность воды в кг на кубический метр
+    :return: градиент давления
+    """
     salinity = salinity_gg(rho_water)
     rho = rho_w_kgm3(p_MPa, T_K, salinity)
     mu = visc_w_cP(p_MPa, T_K, salinity)
@@ -109,6 +122,18 @@ def dp_dh(p_MPa, T_K, q_liq_per_day, d_m, angle_deg, roughness, rho_water):
 
 
 def dpdT_dh(pT, h, q_liq_per_day, d_m, angle_deg, roughness, T_grad, rho_water):
+    """
+    для расчёта давления и температуры вдоль ствола скважины путём интегрирования градиентов
+    :param pT: список из двух элементов: градиента давления и градиента температуры на данном шаге интегрирования
+    :param h: шаг интегрирования
+    :param q_liq_per_day: дебит жидкости в кубометрах в сутки
+    :param d_m: диаметр трубы в метрах
+    :param angle_deg: угол наклона скважины к горизонтали в метрах
+    :param roughness: шероховатость в метрах
+    :param T_grad: геотермический градиент в градусах Кельвина на 1 метр
+    :param rho_water: плотность воды в кг на кубический метр
+    :return: список из значения градиента давления и значения градиента температуры на данном шаге интегрирования
+    """
     dpdh = dp_dh(pT[0], pT[1], q_liq_per_day, d_m, angle_deg, roughness, rho_water)
     dTdh = T_grad*np.sin(angle_deg * np.pi / 180)
     return [dpdh, dTdh]
@@ -116,10 +141,34 @@ def dpdT_dh(pT, h, q_liq_per_day, d_m, angle_deg, roughness, T_grad, rho_water):
 
 if __name__ == '__main__':
 
+    # графики основных зависимостей между параметрами
+    temperatures = np.linspace(0, 400, 50)
+    density = np.linspace(992, 1300, 50)
+    rate = np.linspace(0, 5, 50)
+    axs = [None] * 4
+    fig, ((axs[0], axs[1]), (axs[2], axs[3])) = plt.subplots(nrows=2, ncols=2, figsize=(9, 7))
+    fig.tight_layout(pad=5)
+    axs[0].plot(temperatures, [rho_w_kgm3(0.101325, temperature + 273, 0.001) for temperature in temperatures])
+    axs[0].set_title('Зависимость плотности воды от\n температуры при 1 атм')
+    axs[1].plot(density, [salinity_gg(dens) for dens in density])
+    axs[1].set_title('Зависимость солёности от плотности\n воды в стандартных условиях')
+    for i in [0.1, 0.01, 0.001, 0.0001]:
+        axs[2].plot(temperatures, [visc_w_cP(0.101325, temperature + 273, i) for temperature in temperatures],
+                 label=f'солёность {i}')
+    axs[2].set_title('Зависимость вязкости воды от\n температуры при 1 атм')
+    axs[2].legend()
+    axs[3].plot(rate, [Re(r, 0.089) for r in rate])
+    axs[3].set_title('Зависимость числа Рейнольдса от дебита\n нагнетательной скважины')
+    for ax in axs:
+        ax.grid(linewidth=0.3)
+    plt.show()
+
+    # входные параметры моего варианта задания
     f = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'input_data', '16.json'))
     input_parameters = json.load(f)
     f.close()
 
+    # перевод в единицы измерения, необходимые для расчёта
     rho_water = input_parameters['gamma_water'] * 1000  # плотность воды, кг/м3
     md_vdp = input_parameters['md_vdp']  # глубина верхних дыр перфорации, м
     d_tub = input_parameters['d_tub']  # диаметр НКТ, м
@@ -129,6 +178,7 @@ if __name__ == '__main__':
     T_wh = input_parameters['t_wh'] + 273  # температура жидкости у буферной задвижки, градус Кельвина
     temp_grad = input_parameters['temp_grad'] / 100  # геотермический градиент, градус Кельвина / 1 м
 
+    # расчёт (интегрирование) при разных значениях дебитов нагнетательной скважины
     q_liqs = np.arange(10, 400, 10)
     pressure_result = np.array([])
     temperature_result = np.array([])
@@ -137,9 +187,11 @@ if __name__ == '__main__':
         #                   args=(q_liq, d_tub, angle, roughness, temp_grad, rho_water))
         result = odeint(dpdT_dh, [p_wh, T_wh], np.linspace(0, md_vdp, 100),
                         args=(q_liq, d_tub, angle, roughness, temp_grad, rho_water))
+        print(result)
         pressure_result = np.append(pressure_result, result[:, 0][-1])
         temperature_result = np.append(temperature_result, result[:, 1][-1])
 
     plt.plot(q_liqs, pressure_result / 0.101325)
+    plt.grid()
     plt.show()
     #print(result.y[0])
