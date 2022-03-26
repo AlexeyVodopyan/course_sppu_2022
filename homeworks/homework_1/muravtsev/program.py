@@ -187,4 +187,4 @@ if __name__ == '__main__':
     }
 
     with open('output.json', mode='w', encoding='UTF-8') as f:
-        json.dump(to_json_file, f)
+        json.dump(to_json_file, f, indent=4)
