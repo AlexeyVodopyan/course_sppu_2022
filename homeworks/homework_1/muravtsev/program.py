@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
+from scipy.integrate import quad
 import json
 import os
 
@@ -69,7 +70,7 @@ def friction_Jain(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness=0.00
     :param mu_mPas: вязкость жидкости в миллипуазах (по умолчанию 0.2 мПз)
     :param rho_kgm3: плотность жидкости в кг на кубический метр (по умолчанию 1000 кг/м3, чистая вода)
     :param roughness: шероховатость в метрах (по умолчанию 0.000018 м)
-    :return: коэффициент трения Муди
+    :return: коэффициент трения Муди по Джейн
     """
     Re_val = Re(q_m3day, d_m, mu_mPas, rho_kgm3)
     if Re_val < 3000:
@@ -87,7 +88,7 @@ def friction_Churchill(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness
     :param mu_mPas: вязкость жидкости в миллипуазах (по умолчанию 0.2 мПз)
     :param rho_kgm3: плотность жидкости в кг на кубический метр (по умолчанию 1000 кг/м3, чистая вода)
     :param roughness: шероховатость в метрах (по умолчанию 0.000018 м)
-    :return: коэффициент трения Муди
+    :return: коэффициент трения Муди по Черчиллю
     """
     Re_val = Re(q_m3day, d_m, mu_mPas, rho_kgm3)
     A = (-2.457 * np.log((7/Re_val)**(0.9)+0.27*(roughness/d_m)))**16
@@ -96,47 +97,21 @@ def friction_Churchill(q_m3day, d_m=0.089, mu_mPas=0.2, rho_kgm3=1000, roughness
     return fr
 
 
-def dp_dh(p_MPa, T_K, q_liq_per_day, d_m, angle_deg, roughness, rho_water):
+def Dp_Dx(x):
     """
-    рассчитывает градиент давления в скважине
-    :param p_MPa: давление в МПа
-    :param T_K: температура в К
-    :param q_liq_per_day: дебит жидкости в кубометрах в сутки
-    :param d_m: диаметр трубы в метрах
-    :param angle_deg: угол наклона скважины к горизонтали в метрах
-    :param roughness: шероховатость в метрах
-    :param rho_water: плотность воды в кг на кубический метр
-    :return: градиент давления
+    расчёт градиента давления на текущем шаге интегрирования
+    :param x: шаг интегрирования
+    :return: градиент давления на данном шаге
     """
+    cos_alpha = (TVD[1] - TVD[0]) / (MD[1] - MD[0])
+    T = T_wh + temp_grad * x * cos_alpha
+
     salinity = salinity_gg(rho_water)
-    rho = rho_w_kgm3(p_MPa, T_K, salinity)
-    mu = visc_w_cP(p_MPa, T_K, salinity)
-
-    dp_dl_grav = rho * 9.81 * np.sin(angle_deg * np.pi / 180)
-
-    q_liq_per_second = q_liq_per_day / 86400
-    f = friction_Churchill(q_liq_per_day, d_m, mu, rho, roughness)
-    dp_dl_fric = f * rho * q_liq_per_second**2 / d_m**5
-
-    return (dp_dl_grav - 0.81057 * dp_dl_fric) / 1e6
-
-
-def dpdT_dh(pT, h, q_liq_per_day, d_m, angle_deg, roughness, T_grad, rho_water):
-    """
-    для расчёта давления и температуры вдоль ствола скважины путём интегрирования градиентов
-    :param pT: список из двух элементов: градиента давления и градиента температуры на данном шаге интегрирования
-    :param h: шаг интегрирования
-    :param q_liq_per_day: дебит жидкости в кубометрах в сутки
-    :param d_m: диаметр трубы в метрах
-    :param angle_deg: угол наклона скважины к горизонтали в метрах
-    :param roughness: шероховатость в метрах
-    :param T_grad: геотермический градиент в градусах Кельвина на 1 метр
-    :param rho_water: плотность воды в кг на кубический метр
-    :return: список из значения градиента давления и значения градиента температуры на данном шаге интегрирования
-    """
-    dpdh = dp_dh(pT[0], pT[1], q_liq_per_day, d_m, angle_deg, roughness, rho_water)
-    dTdh = T_grad*np.sin(angle_deg * np.pi / 180)
-    return [dpdh, dTdh]
+    rho = rho_w_kgm3(p[-1], T, salinity)
+    mu = visc_w_cP(p[-1], T, salinity)
+    f = friction_Churchill(q_liq_per_day, d_tub, mu, rho, roughness)
+    dp_dx = (rho * 9.81 * cos_alpha - f * rho * q_liq_per_second**2 / d_tub**5) / 1e6
+    return dp_dx
 
 
 if __name__ == '__main__':
@@ -169,7 +144,7 @@ if __name__ == '__main__':
     f.close()
 
     # перевод в единицы измерения, необходимые для расчёта
-    rho_water = input_parameters['gamma_water'] * 1000  # плотность воды, кг/м3
+    rho_water = input_parameters['gamma_water'] * 1000  # плотность воды в ст.усл., кг/м3
     md_vdp = input_parameters['md_vdp']  # глубина верхних дыр перфорации, м
     d_tub = input_parameters['d_tub']  # диаметр НКТ, м
     angle = input_parameters['angle']  # угол наклона скважины к горизонтали, градус
@@ -178,20 +153,38 @@ if __name__ == '__main__':
     T_wh = input_parameters['t_wh'] + 273  # температура жидкости у буферной задвижки, градус Кельвина
     temp_grad = input_parameters['temp_grad'] / 100  # геотермический градиент, градус Кельвина / 1 м
 
-    # расчёт (интегрирование) при разных значениях дебитов нагнетательной скважины
-    q_liqs = np.arange(10, 400, 10)
-    pressure_result = np.array([])
-    temperature_result = np.array([])
-    for q_liq in q_liqs:
-        #result = solve_ivp(dpdT_dh, t_span=[0, md_vdp], y0=np.array([p_wh, T_wh]),
-        #                   args=(q_liq, d_tub, angle, roughness, temp_grad, rho_water))
-        result = odeint(dpdT_dh, [p_wh, T_wh], np.linspace(0, md_vdp, 100),
-                        args=(q_liq, d_tub, angle, roughness, temp_grad, rho_water))
-        print(result)
-        pressure_result = np.append(pressure_result, result[:, 0][-1])
-        temperature_result = np.append(temperature_result, result[:, 1][-1])
+    # задание геометрии (инклинометрии)
+    MD = [0, md_vdp]
+    TVD = [0, np.sin(angle * np.pi / 180) * md_vdp]
 
-    plt.plot(q_liqs, pressure_result / 0.101325)
+    # интегрирование вдоль скважины
+    p_wf_q = np.empty(0)  # лист с забойными давлениями при разных значениях дебита
+
+    q_liqs = np.arange(0, 400, 10)
+
+    for q_liq_per_day in q_liqs:
+        q_liq_per_second = q_liq_per_day / 86400
+        h_md = np.linspace(0, md_vdp, 200)
+        p = [p_wh]
+        for i in range(0, 199):
+            p_next = p[-1] + quad(Dp_Dx, h_md[i], h_md[i+1])[0]
+            p.append(p_next)
+        p_wf_q = np.append(p_wf_q, p[-1])
+
+    p_wf_q = p_wf_q / 0.101325  # из МПа в атм
+
+    plt.plot(q_liqs, p_wf_q)
+    plt.title('Зависимость забойного давления от дебита')
+    plt.xlabel("Дебит, м^3/сут")
+    plt.ylabel("Давление, атм")
     plt.grid()
     plt.show()
-    #print(result.y[0])
+
+    # запись в json файл
+    to_json_file = {
+        'q_liq': q_liqs.tolist(),
+        'p_wf': p_wf_q.tolist()
+    }
+
+    with open('output.json', mode='w', encoding='UTF-8') as f:
+        json.dump(to_json_file, f)
