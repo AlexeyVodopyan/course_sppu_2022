@@ -160,7 +160,8 @@ if __name__ == '__main__':
     # интегрирование вдоль скважины
     p_wf_q = np.empty(0)  # лист с забойными давлениями при разных значениях дебита
 
-    q_liqs = np.arange(0, 400, 10)
+    q_liqs = np.arange(10, 400, 10)
+    q_liqs = np.concatenate(([1], q_liqs))
 
     for q_liq_per_day in q_liqs:
         q_liq_per_second = q_liq_per_day / 86400
@@ -171,6 +172,7 @@ if __name__ == '__main__':
             p.append(p_next)
         p_wf_q = np.append(p_wf_q, p[-1])
 
+    q_liqs[0] = 0  # изменяет 1 куб/сут на 0 куб/сут (для соответствия примеру выходного файла)
     p_wf_q = p_wf_q / 0.101325  # из МПа в атм
 
     plt.plot(q_liqs, p_wf_q)
@@ -187,4 +189,4 @@ if __name__ == '__main__':
     }
 
     with open('output.json', mode='w', encoding='UTF-8') as f:
-        json.dump(to_json_file, f, indent=4)
+        json.dump(to_json_file, f, indent='\t')
