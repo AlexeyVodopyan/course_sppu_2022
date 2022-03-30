@@ -146,7 +146,7 @@ if __name__ == '__main__':
     # перевод в единицы измерения, необходимые для расчёта
     rho_water = input_parameters['gamma_water'] * 1000  # плотность воды в ст.усл., кг/м3
     md_vdp = input_parameters['md_vdp']  # глубина верхних дыр перфорации, м
-    d_tub = input_parameters['d_tub']  # диаметр НКТ, м
+    d_tub = input_parameters['d_tub'] / 10  # диаметр НКТ, м
     angle = input_parameters['angle']  # угол наклона скважины к горизонтали, градус
     roughness = input_parameters['roughness']  # шероховатость
     p_wh = input_parameters['p_wh'] * 0.101325  # буферное давление, МПа
