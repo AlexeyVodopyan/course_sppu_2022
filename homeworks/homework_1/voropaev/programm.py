@@ -146,7 +146,7 @@ def calc_dp_dl(
     else:
         dp_dl_fric = 0
 
-    dp_dl = dp_dl_grav + 0.815 * dp_dl_fric
+    dp_dl = dp_dl_grav - 0.815 * dp_dl_fric
 
     return dp_dl
 
@@ -320,7 +320,7 @@ def calc_solution(
     t_wh = input_data.get('t_wh') + 273.15
     temp_grad = input_data.get('temp_grad')
 
-    q_liq = np.linspace(0, 400, 40)
+    q_liq = np.linspace(0, 400, 41)
 
     p_wf = np.vectorize(calc_p_wf)
 
