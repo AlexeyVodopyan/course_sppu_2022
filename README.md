@@ -3,6 +3,7 @@
 ### Домашние задания
 
 - [Домашнее Задание №1](docs/homework_pages/homework_1.md) - дедлайн: 01.04.2022
+- [Домашнее Задание №2](docs/homework_pages/homework_2.md) - дедлайн: 11.05.2022
 
 ### Презентации с лекций
 
@@ -15,6 +16,7 @@
 - [Семинар №1. Построение кривой распределения давления в нагнетательной скважине](docs/seminars/1.injection_well.ipynb)
 - [Семинар №2. Black Oil модель и свойства потока](docs/seminars/2.black_oil_model.ipynb)
 - [Семинар №3. Моделирование фонтанных скважин в программе pipesim](docs/seminars/3.flowing_well_pipesim.md)
+- [Семинар №4. Моделирование фонтанных и газлифтных скважин](docs/seminars/4.flowing_gaslift_well.ipynb)
 
 ### Полезные ссылки
 - [Глоссарий сокращений параметров](docs/homework_pages/glossary.md)
