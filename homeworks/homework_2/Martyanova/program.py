@@ -12,7 +12,6 @@ with open(r".\input_data\13-1.json") as f:
 with open(r".\input_data\13-2.json") as f:
     data2 = json.load(f)
 
-
 class Well:
     def __init__(self, data, data2):
         self.data = data
