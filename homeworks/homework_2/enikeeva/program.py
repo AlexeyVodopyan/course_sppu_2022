@@ -106,14 +106,14 @@ class Calc:
                 h_start='bottom',
                 p_mes = self.ipr_p_wf[i] * 101325,
                 flow_direction=-1,
-                q_liq=self.q_liq_list[-1]/86400,
+                q_liq=self.q_liq_list[i]/86400,
                 extra_output=True
                   )
             pt_wh[i] = self.tubing.calc_pt(
                 h_start='bottom',
                 p_mes = pt[0],
                 flow_direction=-1,
-                q_liq=self.q_liq_list[-1]/86400,
+                q_liq=self.q_liq_list[i]/86400,
                 extra_output=True
             )[0]
         fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(1, 3)
