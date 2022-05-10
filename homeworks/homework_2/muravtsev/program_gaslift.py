@@ -94,18 +94,42 @@ if __name__ == '__main__':
             find_intersection(q_liqs, p_wf, gaslift_vlp)[0]
         )
 
-    plt.plot(q_gas_injs, gaslift_curve)
-
     q_liq_optimal = max(gaslift_curve)
     q_gas_optimal = q_gas_injs[gaslift_curve.index(max(gaslift_curve))]
-    print(q_gas_optimal)
-    print(q_liq_optimal)
+
+    print('Уточнение значений вблизи найденного максимума')
+    # уточняю данные вблизи найденного максимума (расчёт с меньшим шагом q_gas_injs вблизи найденного максимума)
+    q_gas_injs = range(q_gas_optimal - 10000, q_gas_optimal + 10000, 2000)
+    gaslift_curve_accurate = []
+
+    for q_gas_inj in q_gas_injs:
+        print('Текущий расход газлифтного газа: ' + str(q_gas_inj) + ' м3/сут')
+        gaslift_vlp = []
+        for q_liq in q_liqs:
+            gaslift_vlp.append(
+                gaslift_well.calc_pwf_pfl(
+                    p_fl=data['regime']['p_wh'] * 101325,
+                    q_liq=q_liq / 86400,
+                    wct=data['fluid']['wct'],
+                    q_gas_inj=q_gas_inj / 86400
+                ) / 101325)
+        gaslift_curve_accurate.append(
+            find_intersection(q_liqs, p_wf, gaslift_vlp)[0]
+        )
+
+    q_liq_optimal_accurate = max(gaslift_curve_accurate)
+    q_gas_optimal_accurate = q_gas_injs[gaslift_curve_accurate.index(max(gaslift_curve_accurate))]
+
+    plt.plot(q_gas_injs, gaslift_curve_accurate)
+
+    print(q_gas_optimal_accurate)
+    print(q_liq_optimal_accurate)
 
     with open('output.json', 'r', encoding='UTF-8') as f:
         to_json_file = json.load(f)
 
-    to_json_file['t2'] = {'q_inj': q_gas_optimal,
-                          'q_liq': q_liq_optimal}
+    to_json_file['t2'] = {'q_inj': q_gas_optimal_accurate,
+                          'q_liq': q_liq_optimal_accurate}
 
     with open('output.json', 'w', encoding='UTF-8') as f:
         to_json_file = json.dump(to_json_file, f, indent='\t')
