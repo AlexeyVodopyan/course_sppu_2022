@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[44]:
+# In[46]:
 
 
 import seaborn as sns
@@ -177,16 +177,6 @@ def find_intersection(x, y1, y2):
     x_intersect, y_intersect = intersection.xy
     return x_intersect[0], y_intersect[0]
 
-    
-T = []
-t_res = data['temperature']['t_res']
-tvd_vdp = data['inclinometry']['tvd'][-1]
-grad_t = data['temperature']['temp_grad']
-for depth in data['inclinometry']['tvd']:
-    T.append(calc_amb_temp(t_res, tvd_vdp, grad_t, depth))    
-    
-amb_dist = {'MD': data['inclinometry']['md'], 'T': T}
-amb = AmbientTemperatureDistribution(ambient_temperature_distribution=amb_dist)
 
 gaslift_well = GasLiftWell(
          fluid_data={
@@ -218,10 +208,7 @@ gaslift_well = GasLiftWell(
                                                   'd': 0.006}}}
      )
 
-p_res = data['reservoir']['p_res']
-pi = data['reservoir']['pi']
-p_wf = np.linspace(0.1, p_res, 50)
-q_liqs = [calc_ipr(p_res, p_wf_i, pi) for p_wf_i in p_wf]
+q_liqs = q_liq
 q_gas_injs = range(5000, 150000, 10000)
 gaslift_curve = []
 
@@ -243,7 +230,7 @@ q_liq_optimal = max(gaslift_curve)
 q_gas_optimal = q_gas_injs[gaslift_curve.index(max(gaslift_curve))]
 print(q_gas_optimal, q_liq_optimal)
 
-delta1 = abs(10 - q_gas_optimal*3/100)
+delta1 = abs(3 - q_gas_optimal*3/100)
 q_gas_injs_new = range( int(q_gas_optimal - delta1), int(q_gas_optimal + delta1), 400)
 gaslift_curve_new = []
 
@@ -264,7 +251,7 @@ q_liq_optimal_new = max(gaslift_curve_new)
 q_gas_optimal_new = q_gas_injs_new[gaslift_curve_new.index(max(gaslift_curve_new))]
 print(q_gas_optimal_new, q_liq_optimal_new)
 
-delta2 = abs(10 - q_gas_optimal_new*1/100)
+delta2 = abs(1 - q_gas_optimal_new*1/100)
 q_gas_injs_new2 = range( int(q_gas_optimal_new - delta2), int(q_gas_optimal_new + delta2), 25)
 gaslift_curve_new2 = []
 q_gas_injs_new2
