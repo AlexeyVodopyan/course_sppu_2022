@@ -46,7 +46,7 @@ angle = data['angle']
 roughness = data['roughness']
 
 #Буферное давление, атм -> МПа
-p_wh = data['p_wh''t_wh']*101325*1e-6
+p_wh = data['p_wh']*101325*1e-6
 
 #Температура жидкости у буферной задвижки, град -> K
 t_wh = data['t_wh'] + 273
