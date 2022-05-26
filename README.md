@@ -32,6 +32,7 @@ ____
 - [Семинар №3. Моделирование фонтанных скважин в программе pipesim](docs/seminars/3.flowing_well_pipesim.md)
 - [Семинар №4. Моделирование фонтанных и газлифтных скважин](docs/seminars/4.flowing_gaslift_well.ipynb)
 - [Семинар №5. Моделирование скважин, оборудованных УЭЦН в программе pipesim](docs/seminars/5.esp_well_pipesim.md)
+- [Семинар №6. Автоматизация построения скважин в программе pipesim](https://github.com/unifloc/toolkit)
 
 ### Контрольная работа
 
